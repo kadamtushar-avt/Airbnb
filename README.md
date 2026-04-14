@@ -1,6 +1,6 @@
 # Wanderlust - Airbnb Clone Project
 
-A full-stack web application built with the MERN stack (MongoDB, Express, Node.js, and EJS templates) that mimics the core functionality of Airbnb. Users can browse property listings, create new listings, edit existing ones, delete listings, and post reviews for properties.
+A full-stack web application built with Node.js, Express, MongoDB, and EJS that mimics core Airbnb functionality. Users can browse listings, create and manage properties, leave reviews, and authenticate with sessions.
 
 ## Table of Contents
 
@@ -8,256 +8,253 @@ A full-stack web application built with the MERN stack (MongoDB, Express, Node.j
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Installation & Setup](#installation--setup)
-- [Database Configuration](#database-configuration)
-- [API Routes](#api-routes)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [Database](#database)
+- [Application Routes](#application-routes)
 - [Models](#models)
-- [File Structure Explanation](#file-structure-explanation)
-- [How to Run](#how-to-run)
-- [Key Components](#key-components)
+- [Important Notes](#important-notes)
+- [Run the App](#run-the-app)
+- [Developer Utilities](#developer-utilities)
+- [License](#license)
 
 ## Project Overview
 
-Wanderlust is a property listing and review platform that allows users to:
-- View all available property listings
-- Create new listings with property details
-- View detailed information about specific listings
-- Edit and update listing details
-- Delete listings from the database
-- Post reviews and ratings for properties
-- Delete reviews from properties
+Wanderlust is a property listing platform where users can:
+- Browse all property listings
+- View listing details and reviews
+- Create new listings with images, location, and price
+- Edit and delete listings they own
+- Add and remove reviews for listings
+- Sign up, log in, and manage user sessions
 
-The application uses **MongoDB** for data persistence, **Express** for routing, **Node.js** for the server runtime, and **EJS** templates for server-side rendering.
+The app uses MongoDB for storing data, Express for route handling, Mongoose for object modeling, and EJS for server-rendered pages.
 
 ## Features
 
-✅ **Listings Management**
-- Display all listings with index view
-- View individual listing details
-- Create new listings through form submission
-- Edit existing listings
-- Delete listings (with cascading review deletion)
-
-✅ **Reviews System**
-- Add reviews with comments and ratings (1-5 stars)
-- Display reviews on listing detail pages
-- Delete reviews from listings
-- Timestamp tracking for review creation
-
-✅ **Data Validation**
-- Schema validation using Joi for listing data
-- Schema validation for review data
-- Custom error handling with ExpressError class
-- Validation middleware for request data
-
-✅ **Session Management**
-- Express session support
-- Secure session configuration
-- 7-day session expiration
-- HTTP-only cookie security
-
-✅ **Error Handling**
-- Custom error middleware
-- Centralized error handling
-- Custom error page display
-- Detailed error logging
+- User authentication with Passport.js
+- Secure sessions and flash notifications
+- Listing creation, editing, and deletion
+- Review creation and deletion
+- Image upload via Cloudinary
+- Geocoding using OpenStreetMap Nominatim
+- Authorization checks for owners and authors
+- Validation with Joi
+- Custom error handling with `ExpressError`
 
 ## Tech Stack
 
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** (v5.2.1) - Web application framework
-- **MongoDB** - NoSQL database
-- **Mongoose** (v9.2.1) - MongoDB object modeling
-
-### Frontend
-- **EJS** (v4.0.1) - Embedded JavaScript templates
-- **ejs-mate** (v4.0.0) - Template layout support
-- **CSS** - Styling
-
-### Validation & Security
-- **Joi** (v18.0.2) - Schema validation library
-- **express-session** (v1.19.0) - Session management
-- **method-override** (v3.0.0) - HTTP method override support
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- Passport.js
+- EJS + ejs-mate
+- Cloudinary
+- Joi
+- express-session
+- method-override
+- multer
 
 ## Project Structure
 
 ```
 AIRBNB_Major_project/
 ├── app.js                    # Main application entry point
-├── package.json             # Project dependencies
-├── schema.js                # Joi validation schemas
-│
-├── models/                  # Mongoose schemas and models
-│   ├── listing.js          # Listing model with review refs
-│   └── reviews.js          # Review model
-│
-├── routes/                  # Express route handlers
-│   ├── listing.js          # Listing CRUD routes
-│   └── reviews.js          # Review management routes
-│
-├── utils/                   # Utility functions
-│   ├── ExpressError.js     # Custom error class
-│   └── wrapAsync.js        # Async route wrapper
-│
-├── public/                  # Static assets
+├── package.json              # Project dependencies
+├── schema.js                 # Joi validation schemas
+├── cloudConfig.js            # Cloudinary storage configuration
+├── middleware.js             # Auth and validation middleware
+
+├── models/                   # Mongoose models
+│   ├── listing.js            # Listing schema and delete hook
+│   ├── reviews.js            # Review schema
+│   └── user.js               # User schema with Passport plugin
+
+├── controllers/              # Route controller logic
+│   ├── listing.js            # Listings CRUD operations
+│   ├── review.js             # Review create/delete operations
+│   └── user.js               # User auth handlers
+
+├── routes/                   # Express routers
+│   ├── listing.js            # Listing routes
+│   ├── reviews.js            # Review routes
+│   └── user.js               # Auth routes
+
+├── utils/                    # Utility helpers
+│   ├── ExpressError.js       # Custom error class
+│   └── wrapAsync.js          # Async route wrapper
+
+├── public/                   # Static frontend assets
 │   ├── css/
-│   │   └── style.css       # Application styling
+│   │   ├── style.css
+│   │   └── rating.css
 │   └── js/
-│       └── script.js       # Frontend JavaScript
-│
-├── views/                   # EJS templates
+│       └── script.js
+
+├── views/                    # EJS view templates
 │   ├── layouts/
-│   │   └── boilerplate.ejs # Main layout template
+│   │   └── boilerplate.ejs
 │   ├── includes/
-│   │   ├── navbar.ejs      # Navigation bar
-│   │   └── footer.ejs      # Footer component
-│   └── listings/
-│       ├── index.ejs       # All listings view
-│       ├── show.ejs        # Individual listing details
-│       ├── new.ejs         # New listing form
-│       ├── edit.ejs        # Edit listing form
-│       └── error.ejs       # Error display page
-│
-└── init/                    # Database initialization
-    ├── index.js            # Init script runner
-    └── data.js             # Sample listing data
+│   │   ├── navbar.ejs
+│   │   ├── footer.ejs
+│   │   └── flash.ejs
+│   ├── listings/
+│   │   ├── index.ejs
+│   │   ├── show.ejs
+│   │   ├── new.ejs
+│   │   ├── edit.ejs
+│   │   └── error.ejs
+│   └── users/
+│       ├── login.ejs
+│       └── signup.ejs
+
+└── init/                     # Seed data utilities
+    ├── index.js              # Data initialization runner
+    └── data.js               # Sample listing data
 ```
 
-## Installation & Setup
+## Installation
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB (local or cloud instance)
-- npm (Node Package Manager)
+- Node.js
+- npm
+- MongoDB (local or cloud)
 
-### Steps
+### Setup
 
-1. **Clone and Navigate to Project**
+1. Clone the repository and navigate to the folder:
    ```bash
    cd AIRBNB_Major_project
    ```
 
-2. **Install Dependencies**
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-3. **Verify Installation**
-   ```bash
-   npm list
-   ```
+3. Create a `.env` file with required environment variables.
 
-## Database Configuration
+## Environment Variables
 
-### MongoDB Connection
+Add a `.env` file in the project root with:
 
-The application connects to MongoDB at:
-```
-mongodb://127.0.0.1:27017/wanderlust
-```
-
-**To change the connection string**, modify the `MONGO_URL` in [app.js](app.js):
-
-```javascript
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+```env
+MONGO_URL=mongodb://127.0.0.1:27017/wanderlust
+SECRET=your-session-secret
+CLOUD_NAME=your-cloudinary-cloud-name
+CLOUD_API_KEY=your-cloudinary-api-key
+CLOUD_API_SECRET=your-cloudinary-api-secret
 ```
 
-### Database Initialization
+- `MONGO_URL` is used by `mongoose.connect()` in `app.js`
+- `SECRET` secures session cookies
+- Cloudinary variables support image uploads
 
-To populate the database with sample data:
+## Database
+
+### Default Connection
+The app connects to MongoDB using the `MONGO_URL` environment variable.
+
+### Seed Data
+Populate the database with sample listings:
 
 ```bash
 node init/index.js
 ```
 
-This script:
-- Deletes all existing listings
-- Inserts sample listing data from `init/data.js`
+This script clears existing listings and inserts sample data from `init/data.js`.
 
-## API Routes
+## Application Routes
 
-### Listing Routes (`/listings`)
+### Listing Routes
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/listings` | Display all listings |
-| GET | `/listings/new` | Show form to create new listing |
-| POST | `/listings` | Create new listing in database |
-| GET | `/listings/:id` | Display specific listing details with reviews |
-| GET | `/listings/:id/edit` | Show form to edit listing |
-| PUT | `/listings/:id` | Update listing in database |
-| DELETE | `/listings/:id/delete` | Delete listing from database |
+- `GET /listings` - Show all listings
+- `GET /listings/new` - Show new listing form
+- `POST /listings` - Create a listing
+- `GET /listings/:id` - Show listing details
+- `GET /listings/:id/edit` - Show edit form
+- `PUT /listings/:id` - Update listing
+- `DELETE /listings/:id/delete` - Delete listing
 
-### Review Routes (`/listings/:id/reviews`)
+### Review Routes
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | `/listings/:id/reviews` | Add new review to listing |
-| DELETE | `/listings/:id/reviews/:reviewId` | Delete specific review |
+- `POST /listings/:id/reviews` - Add a review
+- `DELETE /listings/:id/reviews/:reviewId` - Delete a review
+
+### User Routes
+
+- `GET /signup` - Signup page
+- `POST /signup` - Register new user
+- `GET /login` - Login page
+- `POST /login` - Authenticate user
+- `GET /logout` - Log out
+
+### Utility Route
+
+- `GET /demoUser` - Creates a demo user for development
 
 ## Models
 
-### Listing Model
+### Listing
+- `title`: String
+- `description`: String
+- `image`: Object with `url` and `filename`
+- `price`: Number
+- `location`: String
+- `country`: String
+- `reviews`: Array of `Review` ObjectIds
+- `owner`: `User` ObjectId
+- `lat`: Number
+- `lng`: Number
 
-**File:** [models/listing.js](models/listing.js)
+### Review
+- `comment`: String
+- `rating`: Number (1-5)
+- `createdAt`: Date
+- `author`: `User` ObjectId
 
-```javascript
-{
-  title: String,
-  description: String,
-  image: {
-    filename: String,
-    url: String (default: Unsplash image)
-  },
-  price: Number (required),
-  location: String,
-  country: String,
-  reviews: [ObjectId] // Reference to Review documents
-}
+### User
+- `username`: String
+- `email`: String
+
+Authentication is handled by `passport-local-mongoose`.
+
+## Important Notes
+
+- Images are uploaded to Cloudinary.
+- Geocoding is performed through OpenStreetMap Nominatim.
+- Authentication is required for creating/editing/deleting listings and reviews.
+- Only listing owners can edit/delete their listings.
+- Only review authors can delete their reviews.
+- When a listing is deleted, associated reviews are also deleted by Mongoose middleware.
+- Flash messages display success/error notifications.
+
+## Run the App
+
+Start the server:
+
+```bash
+node app.js
 ```
 
-**Middleware:** 
-- Post-delete hook that cascades delete to all associated reviews
+Open the app at:
 
-### Review Model
-
-**File:** [models/reviews.js](models/reviews.js)
-
-```javascript
-{
-  comment: String,
-  rating: Number (1-5),
-  createdAt: Date (default: current timestamp)
-}
+```text
+http://localhost:8080/listings
 ```
 
-## File Structure Explanation
+## Developer Utilities
 
-### [app.js](app.js)
-Main application file that:
-- Sets up Express server on port 8080
-- Configures MongoDB connection
-- Sets up EJS templating engine
-- Configures middleware (static files, session, body parsing)
-- Mounts route handlers
-- Implements error handling middleware
+- `app.js` sets up the server, middleware, Passport, and routes.
+- `cloudConfig.js` configures Cloudinary storage.
+- `middleware.js` contains authentication and validation guards.
+- `schema.js` defines Joi schemas for listings and reviews.
 
-### [schema.js](schema.js)
-Joi validation schemas for:
-- **ListingSchema:** Validates listing data (title, description, location, country, price, image)
-- **ReviewsSchema:** Validates review data (comment, rating 1-5)
+## License
 
-### [utils/ExpressError.js](utils/ExpressError.js)
-Custom error class extending JavaScript Error:
-- Accepts statusCode and message
-- Used for consistent error handling throughout app
+This project is authored by `TUSHAR_KADAM` and released under the `ISC` license.
 
-### [utils/wrapAsync.js](utils/wrapAsync.js)
-Higher-order function that:
-- Wraps async route handlers
-- Catches errors and passes to error middleware
-- Prevents unhandled promise rejections
 
 ### Route Files
 
