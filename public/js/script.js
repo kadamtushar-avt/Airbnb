@@ -17,3 +17,39 @@
     }, false)
   })
 })()
+
+
+// Wait for page to load
+document.addEventListener("DOMContentLoaded", () => {
+
+    const mapDiv = document.getElementById("map");
+
+    if (mapDiv) {
+        const lat = parseFloat(mapDiv.dataset.lat);
+        const lng = parseFloat(mapDiv.dataset.lng);
+        const title = mapDiv.dataset.title;
+
+        console.log("Coordinates:", lat, lng);
+
+        // safety check
+        if (isNaN(lat) || isNaN(lng)) {
+            console.log("Invalid coordinates");
+            return;
+        }
+
+        // create map
+        const map = L.map('map').setView([lat, lng], 13);
+
+        // tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // marker
+        L.marker([lat, lng])
+            .addTo(map)
+            .bindPopup(`<b>${title}</b>`)
+            .openPopup();
+    }
+
+});

@@ -1,22 +1,34 @@
+require("dotenv").config(); // must be at top
+
+
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
-const Listing = require("./models/listing.js");
+
+
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-const wrapAsync = require("./utils/wrapAsync.js");
-const ExpressError = require("./utils/ExpressError.js");
-const {listingSchema, reviewsSchema} = require("./schema.js"); 
-const Review = require("./models/reviews.js");
 
-const listings = require("./routes/listing.js"); //router object for /listings
-const reviews = require("./routes/reviews.js"); //router object for /reviews
+const ExpressError = require("./utils/ExpressError.js");
+
+const listingsRouter = require("./routes/listing.js");
+const reviewsRouter = require("./routes/reviews.js");
+const usersRouter = require("./routes/user.js");
+
 const session = require("express-session");
+const flash = require("connect-flash");
+
+const passport = require("passport");
+const LocalPassportStratergy = require("passport-local");
+const User = require("./models/user.js");
+
+// ---------------- SESSION CONFIG ----------------
+
 
 const sessionOptions = {
-    secret: "mysupersecretcode",
+    secret: process.env.SECRET,
     resave: false,
     saveUninitialized: true,
     cookie:{
@@ -24,74 +36,75 @@ const sessionOptions = {
         maxAge: 7 * 24 * 60 * 60 * 1000,
         httpOnly: true,
     }
-}
+};
 
-
-
-
+// ---------------- MIDDLEWARE ----------------
 app.use(express.static(path.join(__dirname,"/public")));
 app.use(methodOverride("_method"));
+app.use(express.urlencoded({extended:true}));
+
+// view engine
 app.set("view engine","ejs");
 app.set("views",path.join(__dirname,"views"));
-app.use(express.urlencoded({extended:true}));
 app.engine("ejs",ejsMate);
 app.set("layout","layouts/boilerplate");
-app.use("/listings",listings); //(/listings) router middleware
-app.use("/listings/:id/reviews",reviews);
-app.use(session(sessionOptions));
 
+// ✅ IMPORTANT ORDER
+app.use(session(sessionOptions));   // 1. session
+app.use(flash());                  // 2. flash
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalPassportStratergy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
 
+// 3. locals middleware
+app.use((req,res,next)=>{
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error")
+    res.locals.currentUser = req.user;
+    next();
+});
 
+// 4. routes
+app.use("/listings",listingsRouter);
+app.use("/listings/:id/reviews",reviewsRouter);
+app.use("/",usersRouter);
 
-
-main().then((res)=>{
+// ---------------- DATABASE ----------------
+main().then(()=>{
     console.log("Connected to DATABASE");
-})
-.catch((err)=>{
+}).catch((err)=>{
     console.log("Error : ",err);
-})
+});
 
-
-async function main(params) {
-    await mongoose.connect(MONGO_URL);
+async function main() {
+    await mongoose.connect(process.env.MONGO_URL);
 }
 
-app.listen(8080,()=>{
-    console.log("Listening at Port 8080");
-});
+// ---------------- ROUTES ----------------
 
-app.get("/",(req,res)=>{
-    res.send("Welcome");
-});
 
-app.get("/testListings",async(req,res)=>{
-    
-    let data1 = new Listing({
-        title:"Tushar",
-        discription:"Ms dhonii",
-        price:1250,
-        location:"Ahmednagar",
-        country:"India"
+app.get("/demoUser",async(req,res)=>{
+    let fakeUser = new User({
+        email: "kadamtushar457@gmail.com",
+        username:"Tushar",
     });
+    let registeredUser = await User.register(fakeUser,"helloworld")
+    res.send(registeredUser);
+})
 
-    await data1.save();
-    console.log("Sample saved");
-});
-
-//for all routes
+// ---------------- ERROR HANDLING ----------------
 app.use((req, res, next) => {
-    // next(new ExpressError(404, "Page not found"));
-    next(new ExpressError(400,"Page not found"));
+    next(new ExpressError(404,"Page not found"));
 });
-
-
-//Error handling middleware:- 
 
 app.use((err,req,res,next)=>{
     let {statusCode = 500,message="Something went wrong"} = err;
-    
-    res.status(statusCode).render("listings/error.ejs",{message})
+    res.status(statusCode).render("listings/error.ejs",{message});
 });
 
-//console.log(err.name);
-    // res.status(statusCode).send(message);
+// ---------------- SERVER ----------------
+app.listen(8080,()=>{
+    console.log("Listening at Port 8080");
+});

@@ -4,100 +4,49 @@ const wrapAsync = require("../utils/wrapAsync.js");
 const {listingSchema, reviewsSchema} = require("../schema.js"); 
 const ExpressError = require("../utils/ExpressError.js");
 const Listing = require("../models/listing.js");
-
-
-
-
-
-
-//function as a middleware
-const validateListing = (req,res,next)=>{
-    let {error} = listingSchema.validate(req.body);
-    
-    if(error){
-        let errorMsg = error.details.map((el)=>el.message).join(",");
-        console.log(errorMsg);
-        throw new ExpressError(404,errorMsg);
-    }else{
-        next();
-    }
-    
-}
-
-
-
-
+const {isLoggedIn, validateListing, isOwner} = require("../middleware.js")
+const listingController = require("../controllers/listing.js");
+const multer = require("multer");
+const {storage} = require("../cloudConfig.js");
+const upload = multer({ storage });
+// const upload = multer({ storage });
 
 
 
 //index Route :-  Display all listings in databse 
-
-router.get("/",wrapAsync(async(req,res)=>{   //  /listings
-
-    const allListings = await Listing.find({});
-    res.render("listings/index.ejs",{allListings});
-
-}));
-
+//create route :- after taking details of listing updations in DB
+router.route("/")
+.get(wrapAsync(listingController.index))
+.post(isLoggedIn,validateListing,upload.single("listing[image]"),wrapAsync(listingController.createListing));
 
 
 //new route :- rendering form and taking details of new listing from user
 
-router.get("/new",(req,res)=>{    // /listings/new
-    res.render("listings/new.ejs")
-});
-
+router.get("/new",isLoggedIn,listingController.renderNewForm);
 
 
 //show Route :- showing details of individual listing 
+//Edit---------Update route:- actual updations in DB after editing
 
-router.get("/:id",wrapAsync(async(req,res)=>{     // /listings/:id
-
-    let {id} = req.params;
-    console.log(id);
-    const listing = await Listing.findById(id).populate("reviews");
-    console.log(listing.reviews);
-    res.render("listings/show.ejs",{listing});
-}));
-
-
-
-
-//create route :- after taking details of listing updations in DB
-
-router.post("/",validateListing,wrapAsync(async(req,res)=>{     // /listings
-    
-    let newListing = new Listing(req.body.listing);
-    console.log(newListing);
-    await newListing.save();
-    res.redirect("/listings");
-}));
+router.route("/:id")
+.get(wrapAsync(listingController.showListing))
+.put(
+  isLoggedIn,
+  isOwner,
+  upload.single("listing[image]"),
+  validateListing,
+  wrapAsync(listingController.updateListing)
+);
 
 //edit route :- rendering form and user can edit details
 
-router.get("/:id/edit",wrapAsync(async(req,res)=>{      // /listings/:id/edit
-     
-    let {id} = req.params;
-    let listing = await Listing.findById(id);
+router.get("/:id/edit",isLoggedIn,isOwner,wrapAsync(listingController.renderEditForm));
 
 
-    res.render("listings/edit.ejs",{listing});
-}));
 
-//Edit---------Update route:- actual updations in DB after editing
-router.put("/:id",validateListing,wrapAsync(async(req,res)=>{        // /listings/:id
-    let {id} = req.params;
-    await Listing.findByIdAndUpdate(id,{...req.body.listing});
-    res.redirect(`/listings/${id}`);
-}));
 
 //Delete route: deleting individual listing
-router.delete("/:id/delete",wrapAsync(async(req,res)=>{   // /listings/:id/delete
-    let {id} = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log(deletedListing);
-    res.redirect("/listings");
-}));
+router.delete("/:id/delete",isLoggedIn,isOwner,wrapAsync(listingController.destroyListing));
 
 
 module.exports = router;

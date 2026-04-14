@@ -7,6 +7,7 @@ main().then((res)=>{
     console.log("Connected to DATABASE");
 })
 .catch((err)=>{
+    
     console.log("Error : ",err);
 })
 
@@ -17,6 +18,7 @@ async function main(params) {
 
 const initDatabase = async()=>{
     await Listing.deleteMany({});
+    initDb.data = initDb.data.map((obj)=>({...obj,owner:"69c7a841b29ecf48493a5016"}))
     await Listing.insertMany(initDb.data);
     console.log("Database is initialised with data");  
 }

@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const {Schema} = mongoose;
-const Review = require("./reviews")
+const Review = require("./reviews");
+const User = require("./user");
+const { ref } = require("joi");
 
 let listingSchema = new mongoose.Schema({
   title: {
@@ -31,7 +33,19 @@ let listingSchema = new mongoose.Schema({
       type:Schema.Types.ObjectId,
       ref:"Review"
     }
-  ]
+  ],
+  owner:{
+    type:Schema.Types.ObjectId,
+    ref:"User",
+  },
+  lat: {
+    type: Number,
+    required: true
+  },
+  lng: {
+    type: Number,
+    required: true
+  }
 });
 
 //Middleware triggered when findbyidanddelete is called 
